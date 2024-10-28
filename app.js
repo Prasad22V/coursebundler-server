@@ -17,17 +17,29 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
-// CORS configuration
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Allow local or frontend URL
-    credentials: true, // Allow credentials (cookies, etc.)
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
-  })
-);
+// Manually setting CORS headers
+app.use((req, res, next) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    process.env.FRONTEND_URL || "http://localhost:3000"
+  );
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
-
+// Handling preflight requests
+app.options("*", (req, res) => {
+  res.header(
+    "Access-Control-Allow-Origin",
+    process.env.FRONTEND_URL || "http://localhost:3000"
+  );
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(200); // Respond with OK status for preflight
+});
 
 // importing & using routes
 import course from "./routes/courseRoute.js";
@@ -46,5 +58,11 @@ app.use("/api/v1", other);
 
 export default app;
 
-app.get("/", (req, res) => res.send(`<h1>Welcome! server is working. click <a href=${process.env.FRONTEND_URL}>here</a> to visit frontend</h1>`));
+app.get("/", (req, res) =>
+  res.send(
+    `<h1>Welcome! Server is working. Click <a href=${
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    }>here</a> to visit frontend</h1>`
+  )
+);
 app.use(ErrorMiddleware);
