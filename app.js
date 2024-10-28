@@ -16,13 +16,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // Allowing requests from the specified client URL.
-    credentials: true, // Enabling credentials (cookies) to be sent with the request.
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: process.env.FRONTEND_URL, // Allow requests from this specific frontend
+    credentials: true, // Allow sending cookies
+    methods: ["GET", "POST", "PUT", "DELETE"], // Allow these HTTP methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Allow these headers
   })
 );
+
+
 
 // importing & using routes
 import course from "./routes/courseRoute.js";
