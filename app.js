@@ -17,12 +17,13 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 
+// CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // Allow requests from this specific frontend
-    credentials: true, // Allow sending cookies
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allow these HTTP methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allow these headers
+    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Allow local or frontend URL
+    credentials: true, // Allow credentials (cookies, etc.)
+    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed HTTP methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
   })
 );
 
