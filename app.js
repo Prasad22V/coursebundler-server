@@ -21,7 +21,7 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   res.header(
     "Access-Control-Allow-Origin",
-    process.env.FRONTEND_URL || "http://localhost:3000"
+    process.env.FRONTEND_URL || "*"
   );
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -30,16 +30,8 @@ app.use((req, res, next) => {
 });
 
 // Handling preflight requests
-app.options("*", (req, res) => {
-  res.header(
-    "Access-Control-Allow-Origin",
-    process.env.FRONTEND_URL || "http://localhost:3000"
-  );
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.sendStatus(200); // Respond with OK status for preflight
-});
+
+
 
 // importing & using routes
 import course from "./routes/courseRoute.js";
