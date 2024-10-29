@@ -23,7 +23,7 @@ export const instance = new Razorpay({
   // currency: "INR", // Replace with your desired currency code.
 });
 
-nodeCron.schedule("0 0 0 1 * *", async () => {
+nodeCron.schedule("0 0 0 5 * *", async () => {
   try {
     await Stats.create({});
   } catch (error) {
