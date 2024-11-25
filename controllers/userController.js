@@ -69,7 +69,7 @@ export const logout = catchAsynchError(async (req, res, next) => {
       secure: true,
       sameSite: "none",
     })
-    .json({ success: true, message: "You have been logged out" });
+    .json({ success: true, message: "You have logged out Successfully" });
 });
 
 export const getMyProfile = catchAsynchError(async (req, res, next) => {

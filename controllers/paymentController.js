@@ -73,35 +73,61 @@ export const getRazorPayKey = catchAsynchError(async (req, res, next) => {
 });
 
 export const cancelSubscription = catchAsynchError(async (req, res, next) => {
-  const user = await User.findById(req.user._id);
+  try {
+    // Find the user
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-  const subscriptionId = user.subscription.id;
-  let refund = false;
+    const subscriptionId = user.subscription.id;
 
-  await instance.subscriptions.cancel(subscriptionId);
+    // Cancel the Razorpay subscription
+    console.log("Cancelling subscription with ID:", subscriptionId);
+    await instance.subscriptions.cancel(subscriptionId);
 
-  const payment = await Payment.findOne({
-    razorpay_subscription_id: subscriptionId,
-  });
+    // Find the associated payment record
+    const payment = await Payment.findOne({
+      razorpay_subscription_id: subscriptionId,
+    });
 
-  const gap = Date.now() - payment.createdAt;
+    if (!payment) {
+      return res.status(404).json({ success: false, message: "Payment not found" });
+    }
 
-  const refundTime = process.env.REFUND_DAYS * 24 * 60 * 60 * 1000;
+    console.log("Found payment:", payment._id);
 
-  if (refundTime > gap) {
-    await instance.payments.refund(payment.razorpay_payment_id);
-    refund = true;
+    const gap = Date.now() - payment.createdAt;
+    const refundTime = process.env.REFUND_DAYS * 24 * 60 * 60 * 1000;
+    let refund = false;
+
+    // Process refund if applicable
+    if (refundTime > gap) {
+      console.log("Refunding payment ID:", payment.razorpay_payment_id);
+      await instance.payments.refund(payment.razorpay_payment_id);
+      refund = true;
+    }
+
+    // Delete the payment record
+    console.log("Deleting payment with ID:", payment._id);
+    await Payment.findByIdAndDelete(payment._id);
+
+    // Clear the user's subscription details
+    user.subscription.id = undefined;
+    user.subscription.status = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: refund
+        ? "Subscription cancelled. You will receive a full refund within 7 days."
+        : "Subscription cancelled. Refund initiated as it was after 7 days.",
+    });
+  } catch (error) {
+    console.error("Error during subscription cancellation:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error during subscription cancellation",
+    });
   }
-
-  await payment.delete();
-  user.subscription.id = undefined;
-  user.subscription.status = undefined;
-  await user.save();
-
-  res.status(200).json({
-    success: true,
-    message: refund
-      ? "Subscription cancelled, You will receive full refund within 7 days."
-      : "Subscription cancelled, Now refund initiated as subscription was cancelled after 7 days.",
-  });
 });
