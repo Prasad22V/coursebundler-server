@@ -73,61 +73,44 @@ export const getRazorPayKey = catchAsynchError(async (req, res, next) => {
 });
 
 export const cancelSubscription = catchAsynchError(async (req, res, next) => {
-  try {
-    // Find the user
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+  const user = await User.findById(req.user._id);
 
-    const subscriptionId = user.subscription.id;
+  const subscriptionId = user.subscription.id;
+  let refund = false;
 
-    // Cancel the Razorpay subscription
-    console.log("Cancelling subscription with ID:", subscriptionId);
-    await instance.subscriptions.cancel(subscriptionId);
+  await instance.subscriptions.cancel(subscriptionId);
 
-    // Find the associated payment record
-    const payment = await Payment.findOne({
-      razorpay_subscription_id: subscriptionId,
-    });
+  const payment = await Payment.findOne({
+    razorpay_subscription_id: subscriptionId,
+  });
 
-    if (!payment) {
-      return res.status(404).json({ success: false, message: "Payment not found" });
-    }
-
-    console.log("Found payment:", payment._id);
-
-    const gap = Date.now() - payment.createdAt;
-    const refundTime = process.env.REFUND_DAYS * 24 * 60 * 60 * 1000;
-    let refund = false;
-
-    // Process refund if applicable
-    if (refundTime > gap) {
-      console.log("Refunding payment ID:", payment.razorpay_payment_id);
-      await instance.payments.refund(payment.razorpay_payment_id);
-      refund = true;
-    }
-
-    // Delete the payment record
-    console.log("Deleting payment with ID:", payment._id);
-    await Payment.findByIdAndDelete(payment._id);
-
-    // Clear the user's subscription details
-    user.subscription.id = undefined;
-    user.subscription.status = undefined;
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: refund
-        ? "Subscription cancelled. You will receive a full refund within 7 days."
-        : "Subscription cancelled. Refund initiated as it was after 7 days.",
-    });
-  } catch (error) {
-    console.error("Error during subscription cancellation:", error);
-    res.status(500).json({
+  if (!payment) {
+    return res.status(404).json({
       success: false,
-      message: error.message || "Internal server error during subscription cancellation",
+      message: "Payment record not found.",
     });
   }
+
+  const gap = Date.now() - payment.createdAt;
+
+  const refundTime = process.env.REFUND_DAYS * 24 * 60 * 60 * 1000;
+
+  if (refundTime > gap) {
+    await instance.payments.refund(payment.razorpay_payment_id);
+    refund = true;
+  }
+
+  // Use `remove` or `deleteOne` instead of `delete`
+  await Payment.deleteOne({ razorpay_subscription_id: subscriptionId });
+
+  user.subscription.id = undefined;
+  user.subscription.status = undefined;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: refund
+      ? "Subscription cancelled, You will receive full refund within 7 days."
+      : "Subscription cancelled, No refund initiated as subscription was cancelled after 7 days.",
+  });
 });
